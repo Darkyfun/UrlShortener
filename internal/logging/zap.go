@@ -56,5 +56,6 @@ func NewLogger(outputType string, file *os.File) *EventLogger {
 
 	core := zapcore.NewCore(encType, zapcore.AddSync(file), zapcore.WarnLevel)
 	logger := zap.New(core, zap.AddStacktrace(zapcore.PanicLevel))
+	
 	return &EventLogger{logger: logger}
 }
