@@ -20,8 +20,8 @@ func Saver(cache connect.Cacher, store connect.Storage, addr string) gin.Handler
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
 
-		alias := store.GetAlias(ctx, origUrl)
-		if alias != "" {
+		alias, err := store.GetAlias(ctx, origUrl)
+		if alias != "" && err == nil {
 			c.Set("status code", http.StatusOK)
 			c.JSON(http.StatusOK, gin.H{
 				"Short_url": "http://" + "localhost" + addr + "/redirect/" + alias,
@@ -29,19 +29,33 @@ func Saver(cache connect.Cacher, store connect.Storage, addr string) gin.Handler
 			return
 		}
 
-		alias = lib.GetRandomAlias(10)
-		for {
-			err := store.Set(ctx, alias, origUrl)
-			if err == nil || errors.Is(err, persistent.ErrConnClosed) {
-				break
+		if err != nil {
+			if errors.Is(err, persistent.ErrConnClosed) || errors.Is(err, persistent.ErrConnect) {
+				c.Set("status code", http.StatusInternalServerError)
+				c.String(http.StatusInternalServerError, "internal server error")
+				return
 			}
 		}
-		err := cache.Set(ctx, alias, origUrl)
+
+		alias = lib.GetRandomAlias(10)
+		for {
+			err = store.Set(ctx, alias, origUrl)
+			if err == nil {
+				break
+			} else if errors.Is(err, persistent.ErrConnClosed) || errors.Is(err, persistent.ErrConnect) {
+				c.Set("status code", http.StatusInternalServerError)
+				c.String(http.StatusInternalServerError, "internal server error")
+				return
+			}
+		}
+
+		err = cache.Set(ctx, alias, origUrl)
 		if err != nil {
 			c.Set("status code", http.StatusInternalServerError)
 			fmt.Println(err)
 			return
 		}
+
 		c.Set("status code", http.StatusOK)
 		c.JSON(http.StatusOK, gin.H{
 			"Short_url": "http://" + "localhost" + addr + "/redirect/" + alias,

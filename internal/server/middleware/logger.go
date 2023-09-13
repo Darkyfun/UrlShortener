@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"os"
+	"io"
 	"time"
 )
 
@@ -12,7 +12,7 @@ type LogHandler struct {
 	ZapLog *zap.SugaredLogger
 }
 
-func NewLogHandler(file *os.File) *LogHandler {
+func NewLogHandler(file io.Writer) *LogHandler {
 	conf := zapcore.EncoderConfig{
 		MessageKey:     "message",
 		TimeKey:        "time",
@@ -21,7 +21,7 @@ func NewLogHandler(file *os.File) *LogHandler {
 		EncodeDuration: zapcore.MillisDurationEncoder,
 	}
 
-	core := zapcore.NewCore(zapcore.NewConsoleEncoder(conf), zapcore.Lock(file), zapcore.DebugLevel)
+	core := zapcore.NewCore(zapcore.NewConsoleEncoder(conf), zapcore.Lock(zapcore.AddSync(file)), zapcore.DebugLevel)
 	logger := zap.New(core).Sugar()
 	return &LogHandler{ZapLog: logger}
 }

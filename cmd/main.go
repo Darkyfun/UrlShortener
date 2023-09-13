@@ -32,7 +32,7 @@ func main() {
 	}
 
 	// initializing logger and logging path
-	fmt.Println("Read config")
+	fmt.Println("Reading config")
 	logPaths := path.DestinationLog("./logs")
 	fmt.Println("Setting destination for logs")
 	baseLogger := logging.NewLogger(conf.GetString("OutputType"), logPaths.ErrorLog)
@@ -98,7 +98,9 @@ func main() {
 	}
 
 	select {
-	case <-ctx.Done():
+	case <-serveCtx.Done():
 		baseLogger.Log("warn", "Server shutdown by timeout")
+	default:
+		fmt.Println("Done")
 	}
 }

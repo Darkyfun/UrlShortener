@@ -4,6 +4,7 @@ import (
 	"Darkyfun/UrlShortener/internal/logging"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,8 +18,8 @@ var ErrAlreadyExists = errors.New("alias already exists")
 var ErrConnClosed = errors.New("connection closed")
 
 type Db struct {
-	pool   Pooler
-	logger *logging.EventLogger
+	pool Pooler
+	log  logging.Logger
 }
 
 type Pooler interface {
@@ -35,6 +36,7 @@ func (d *Db) Close() {
 func NewDb(ctx context.Context, logger *logging.EventLogger, conn string) *Db {
 	pool, err := pgxpool.New(ctx, conn)
 	if err != nil {
+		fmt.Println(err)
 		log.Fatalf("%s", ErrConnect)
 		return nil
 	}
@@ -48,40 +50,65 @@ func NewDb(ctx context.Context, logger *logging.EventLogger, conn string) *Db {
 	_, _ = pool.Exec(ctx, table)
 
 	return &Db{
-		pool:   pool,
-		logger: logger,
+		pool: pool,
+		log:  logger,
 	}
 }
 
 func (d *Db) GetOriginal(ctx context.Context, alias string) (string, error) {
 	res := d.pool.QueryRow(ctx, `select original from url where alias = $1`, alias)
 	var orig string
+
 	err := res.Scan(&orig)
+
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNoRows
 	}
+	if err != nil && err.Error() == `closed pool` {
+		d.log.Log("error", "unable to insert "+alias+" "+orig+" in sql: pool is closed")
+		return "", ErrConnClosed
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "", ErrConnect
+	}
+
 	return orig, err
 }
 
-func (d *Db) GetAlias(ctx context.Context, orig string) string {
+func (d *Db) GetAlias(ctx context.Context, orig string) (string, error) {
 	res := d.pool.QueryRow(ctx, `select alias from url where original = $1`, orig)
 	var alias string
+
 	err := res.Scan(&alias)
+
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {
-		return ""
+		return "", ErrNoRows
 	}
-	return alias
+	if err != nil && err.Error() == `closed pool` {
+		d.log.Log("error", "unable to insert "+alias+" "+orig+" in sql: pool is closed")
+		return "", ErrConnClosed
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "", ErrConnect
+	}
+
+	return alias, nil
 }
 
 func (d *Db) Set(ctx context.Context, alias string, orig string) error {
 	_, err := d.pool.Exec(ctx, `insert into url (alias, original, created_date) values ($1, $2, $3)`, alias, orig, time.Now())
+
 	if err != nil && err.Error() == `ERROR: duplicate key value violates unique constraint "url_pkey" (SQLSTATE 23505)` {
 		return ErrAlreadyExists
 	}
 	if err != nil && err.Error() == `closed pool` {
-		d.logger.Log("error", "unable to insert "+alias+" "+orig+" in sql: pool is closed")
+		d.log.Log("error", "unable to insert "+alias+" "+orig+" in sql: pool is closed")
 		return ErrConnClosed
 	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return ErrConnect
+	}
+
 	return err
 }
 

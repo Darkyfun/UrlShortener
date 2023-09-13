@@ -3,7 +3,7 @@ package logging
 import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"os"
+	"io"
 )
 
 type Logger interface {
@@ -31,7 +31,7 @@ func (c *EventLogger) Log(level string, msg string) {
 	}
 }
 
-func NewLogger(outputType string, file *os.File) *EventLogger {
+func NewLogger(outputType string, file io.Writer) *EventLogger {
 	var encType zapcore.Encoder
 	conf := zapcore.EncoderConfig{
 		MessageKey:          "message",
@@ -56,6 +56,6 @@ func NewLogger(outputType string, file *os.File) *EventLogger {
 
 	core := zapcore.NewCore(encType, zapcore.AddSync(file), zapcore.WarnLevel)
 	logger := zap.New(core, zap.AddStacktrace(zapcore.PanicLevel))
-	
+
 	return &EventLogger{logger: logger}
 }

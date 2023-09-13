@@ -13,8 +13,8 @@ var ErrClientClosed = errors.New("unable to set a record: client is closed")
 var ErrCacheMiss = errors.New("cache miss")
 
 type RapidDb struct {
-	rdb    *redis.Client
-	logger *logging.EventLogger
+	rdb *redis.Client
+	log logging.Logger
 }
 
 type Opts struct {
@@ -27,7 +27,7 @@ func NewCacheDb(options Opts, log *logging.EventLogger) *RapidDb {
 		Addr: options.Addr,
 	})
 
-	return &RapidDb{rdb: client, logger: log}
+	return &RapidDb{rdb: client, log: log}
 }
 
 func (c *RapidDb) Ping(ctx context.Context) error {
@@ -42,12 +42,13 @@ func (c *RapidDb) Close() error {
 func (c *RapidDb) Set(ctx context.Context, key string, value any) error {
 	_, err := c.rdb.Set(ctx, key, value, time.Hour).Result()
 	if err != nil && err.Error() == "redis: client is closed" {
-		c.logger.Log("error", ErrClientClosed.Error())
+		c.log.Log("error", ErrClientClosed.Error())
 		return ErrClientClosed
 	} else if err != nil {
-		c.logger.Log("error", ErrFailed.Error())
+		c.log.Log("error", ErrFailed.Error())
 		return ErrFailed
 	}
+
 	return nil
 }
 
@@ -55,10 +56,20 @@ func (c *RapidDb) Set(ctx context.Context, key string, value any) error {
 func (c *RapidDb) Get(ctx context.Context, key string) (string, error) {
 	res := c.rdb.Get(ctx, key)
 	url, err := res.Result()
+	//if err != nil {
+	//	if err.Error() == "redis: nil" {
+	//		return "", ErrCacheMiss
+	//	} else {
+	//		return "", ErrFailed
+	//	}
+	//}
 	if err != nil {
-		if err.Error() == "redis: nil" {
+		switch {
+		case err.Error() == "redis: nil":
 			return "", ErrCacheMiss
-		} else {
+		case err.Error() == "redis: client is closed":
+			return "", ErrClientClosed
+		default:
 			return "", ErrFailed
 		}
 	}

@@ -17,7 +17,6 @@ type aliasRequest struct {
 func Redirect(cache connect.Cacher, store connect.Storage, logger *logging.EventLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var q aliasRequest
-
 		err := c.ShouldBindUri(&q)
 		if err != nil {
 			c.Set("status code", http.StatusBadRequest)

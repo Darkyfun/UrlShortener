@@ -24,6 +24,8 @@ func Validate() gin.HandlerFunc {
 		if err != nil {
 			c.Set("status code", http.StatusBadRequest)
 			c.String(http.StatusBadRequest, "invalid request")
+			c.Abort()
+			return
 		}
 
 		if r.Url == "" {
