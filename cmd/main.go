@@ -34,7 +34,11 @@ func main() {
 	// initializing logger and logging path
 	fmt.Println("Reading config")
 	logPaths := path.DestinationLog("./logs")
+	defer logPaths.IncomeLog.Close()
+	defer logPaths.ErrorLog.Close()
+
 	fmt.Println("Setting destination for logs")
+
 	baseLogger := logging.NewLogger(conf.GetString("OutputType"), logPaths.ErrorLog)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
@@ -49,9 +53,11 @@ func main() {
 	}
 
 	rdb := cache.NewCacheDb(cacheOpts, baseLogger)
+	defer rdb.Close()
 	fmt.Println("Connected to cache database")
 
 	db := persistent.NewDb(ctx, baseLogger, conf.GetString("SqlConnString"))
+	defer db.Close()
 	fmt.Println("Connected to persistence database")
 
 	// cache healthcheck
@@ -86,7 +92,11 @@ func main() {
 	fmt.Println("Server has been started")
 
 	quit := make(chan os.Signal)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(
+		quit,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
 	<-quit
 
 	fmt.Println("Shutting down the server")

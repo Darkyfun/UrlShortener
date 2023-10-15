@@ -3,14 +3,13 @@ package path
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 )
 
 type Logs struct {
 	IncomeLog *os.File
-	ErrorLog  io.Writer
+	ErrorLog  *os.File
 }
 
 func DestinationLog(path string) *Logs {

@@ -8,5 +8,6 @@ func GetRandomAlias(i int) string {
 	for k := range alias {
 		alias[k] = runes[rand.Intn(len(runes))]
 	}
+
 	return string(alias)
 }

@@ -41,6 +41,7 @@ func (c *RapidDb) Close() error {
 // Set sets key-value pair in the cache
 func (c *RapidDb) Set(ctx context.Context, key string, value any) error {
 	_, err := c.rdb.Set(ctx, key, value, time.Hour).Result()
+
 	if err != nil && err.Error() == "redis: client is closed" {
 		c.log.Log("error", ErrClientClosed.Error())
 		return ErrClientClosed
@@ -56,13 +57,7 @@ func (c *RapidDb) Set(ctx context.Context, key string, value any) error {
 func (c *RapidDb) Get(ctx context.Context, key string) (string, error) {
 	res := c.rdb.Get(ctx, key)
 	url, err := res.Result()
-	//if err != nil {
-	//	if err.Error() == "redis: nil" {
-	//		return "", ErrCacheMiss
-	//	} else {
-	//		return "", ErrFailed
-	//	}
-	//}
+
 	if err != nil {
 		switch {
 		case err.Error() == "redis: nil":
@@ -73,5 +68,6 @@ func (c *RapidDb) Get(ctx context.Context, key string) (string, error) {
 			return "", ErrFailed
 		}
 	}
+
 	return url, nil
 }

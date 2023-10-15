@@ -33,6 +33,7 @@ func (c *EventLogger) Log(level string, msg string) {
 
 func NewLogger(outputType string, file io.Writer) *EventLogger {
 	var encType zapcore.Encoder
+	
 	conf := zapcore.EncoderConfig{
 		MessageKey:          "message",
 		LevelKey:            "log_level",
