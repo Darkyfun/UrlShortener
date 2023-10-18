@@ -22,12 +22,21 @@ type Opts struct {
 	MaxRetries, PoolSize int
 }
 
-func NewCacheDb(options Opts, log *logging.EventLogger) *RapidDb {
+func NewCacheDb(options Opts, log *logging.EventLogger) (*RapidDb, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr: options.Addr,
 	})
 
-	return &RapidDb{rdb: client, log: log}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
+
+	_, err := client.Ping(ctx).Result()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &RapidDb{rdb: client, log: log}, nil
 }
 
 func (c *RapidDb) Ping(ctx context.Context) error {

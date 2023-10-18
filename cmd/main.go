@@ -52,7 +52,11 @@ func main() {
 		PoolSize:   conf.GetInt("PoolSize"),
 	}
 
-	rdb := cache.NewCacheDb(cacheOpts, baseLogger)
+	rdb, err := cache.NewCacheDb(cacheOpts, baseLogger)
+	if err != nil {
+		baseLogger.Log("error", err.Error())
+		log.Fatal(err)
+	}
 	defer rdb.Close()
 	fmt.Println("Connected to cache database")
 
@@ -104,12 +108,13 @@ func main() {
 	defer cancel()
 
 	if err = server.Shutdown(serveCtx); err != nil {
-		log.Fatalf("Shutting down: %v\n", err)
+		fmt.Errorf("Shutting down: %v\n", err)
 	}
 
 	select {
 	case <-serveCtx.Done():
 		baseLogger.Log("warn", "Server shutdown by timeout")
+		fmt.Println("Server shutdown by timeout")
 	default:
 		fmt.Println("Done")
 	}
