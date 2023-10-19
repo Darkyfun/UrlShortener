@@ -8,11 +8,11 @@ WriteTimeout: 3
 IdleTimeout: 30
 
 # redis config
-CacheAddr: "192.168.10.2:6379"
+CacheAddr: "shortener-redis:6379"
 CacheUser: ""
 CachePass: ""
 MaxRetries: 3 # default is 3
 PoolSize: 60  # default is 10 per CPU
 
 # TODO Postgres config
-SqlConnString: "postgres://postgres:123@192.168.10.3:5432/service"
+SqlConnString: "postgres://postgres:123@shortener-postgres:5432/service"
