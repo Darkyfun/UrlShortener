@@ -4,7 +4,6 @@ import (
 	"Darkyfun/UrlShortener/internal/logging"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -36,9 +35,16 @@ func (d *Db) Close() {
 func NewDb(ctx context.Context, logger *logging.EventLogger, conn string) *Db {
 	pool, err := pgxpool.New(ctx, conn)
 	if err != nil {
-		fmt.Println(err)
 		log.Fatalf("%s", ErrConnect)
 		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
+
+	err = pool.Ping(ctx)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	table := `create table if not exists url (
