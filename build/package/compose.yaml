@@ -1,0 +1,35 @@
+services:
+  shortener:
+    image: shortener
+    container_name: shortener
+    networks:
+      shortener-network:
+        ipv4_address: 192.168.10.4
+    environment:
+      - SHORTENER_CONFIG_PATH=/bin/conf.yaml
+    depends_on:
+      - cache
+      - db
+  cache:
+    image: redis:alpine
+    container_name: shortener-redis
+    networks:
+      shortener-network:
+        ipv4_address: 192.168.10.2
+  db:
+    image: postgres
+    container_name: shortener-postgres
+    networks:
+      shortener-network:
+        ipv4_address: 192.168.10.3
+    volumes:
+      - postgre_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=123
+
+networks:
+  shortener-network:
+    external: true
+
+volumes:
+  postgre_data:

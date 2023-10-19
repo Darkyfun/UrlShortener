@@ -58,7 +58,7 @@ func Saver(cache connect.Cacher, store connect.Storage, addr string) gin.Handler
 
 		c.Set("status code", http.StatusOK)
 		c.JSON(http.StatusOK, gin.H{
-			"Short_url": "http://" + "localhost" + addr + "/redirect/" + alias,
+			"Short_url": "http://" + "192.168.10.4" + addr + "/redirect/" + alias,
 		})
 	}
 }
