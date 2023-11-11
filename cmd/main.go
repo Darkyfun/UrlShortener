@@ -4,7 +4,6 @@ import (
 	"Darkyfun/UrlShortener/internal/config"
 	"Darkyfun/UrlShortener/internal/logging"
 	"Darkyfun/UrlShortener/internal/logging/path"
-	"Darkyfun/UrlShortener/internal/server/connect"
 	"Darkyfun/UrlShortener/internal/server/middleware"
 	"Darkyfun/UrlShortener/internal/storage/cache"
 	"Darkyfun/UrlShortener/internal/storage/persistent"
@@ -61,10 +60,10 @@ func main() {
 	fmt.Println("Connected to persistence database")
 
 	// cache healthcheck
-	go connect.PingCache(rdb, baseLogger)
+	go cache.PingCache(rdb, baseLogger)
 
 	// storage healthcheck
-	go connect.PingStorage(db, baseLogger)
+	go persistent.PingStorage(db, baseLogger)
 
 	// initializing Gin framework
 	gin.SetMode(gin.ReleaseMode)

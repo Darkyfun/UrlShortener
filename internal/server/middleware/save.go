@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"Darkyfun/UrlShortener/internal/lib"
-	"Darkyfun/UrlShortener/internal/server/connect"
 	"Darkyfun/UrlShortener/internal/storage/persistent"
 	"context"
 	"errors"
@@ -13,7 +12,7 @@ import (
 )
 
 // Saver is handler who parses original url and then responses with alias url
-func Saver(cache connect.Cacher, store connect.Storage, addr string) gin.HandlerFunc {
+func Saver(cache Cacher, store Storager, addr string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origUrl := c.Request.Context().Value("IncomeUrl").(string)
 

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"Darkyfun/UrlShortener/internal/logging"
-	"Darkyfun/UrlShortener/internal/server/connect"
 	"context"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -14,7 +13,7 @@ type aliasRequest struct {
 }
 
 // Redirect handler for finding the original address by alias and redirecting
-func Redirect(cache connect.Cacher, store connect.Storage, logger *logging.EventLogger) gin.HandlerFunc {
+func Redirect(cache Cacher, store Storager, logger *logging.EventLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var q aliasRequest
 		err := c.ShouldBindUri(&q)
