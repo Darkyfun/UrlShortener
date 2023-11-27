@@ -52,7 +52,12 @@ func main() {
 	}
 
 	rdb := cache.NewCacheDb(cacheOpts, baseLogger)
-	defer rdb.Close()
+	defer func() {
+		err = rdb.Close()
+		if err != nil {
+			baseLogger.Log("error", "can not close the connection to Cache Db: "+err.Error())
+		}
+	}()
 	fmt.Println("Connected to cache database")
 
 	db := persistent.NewDb(ctx, baseLogger, conf.GetString("SqlConnString"))
@@ -63,7 +68,7 @@ func main() {
 	go cache.PingCache(rdb, baseLogger)
 
 	// storage healthcheck
-	go persistent.PingStorage(db, baseLogger)
+	go persistent.PingStorage(&db, baseLogger)
 
 	// initializing Gin framework
 	gin.SetMode(gin.ReleaseMode)
@@ -73,8 +78,8 @@ func main() {
 	router.Use(middleLogger.Logger())
 	router.Use(gin.Recovery())
 
-	router.GET("/redirect/:alias", middleware.Redirect(rdb, db, baseLogger))
-	router.POST("/receive", middleware.Validate(), middleware.Saver(rdb, db, conf.GetString("ServerAddr")))
+	router.GET("/redirect/:alias", middleware.Redirect(rdb, &db, baseLogger))
+	router.POST("/receive", middleware.Validate(), middleware.Saver(rdb, &db, conf.GetString("ServerAddr")))
 
 	server := &http.Server{
 		Addr:         conf.GetString("ServerAddr"),

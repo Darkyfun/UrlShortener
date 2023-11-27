@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"time"
@@ -17,26 +16,18 @@ var ErrAlreadyExists = errors.New("alias already exists")
 var ErrConnClosed = errors.New("connection closed")
 
 type Db struct {
-	pool Pooler
+	pool *pgxpool.Pool
 	log  logging.Logger
-}
-
-type Pooler interface {
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
-	Close()
-	Ping(ctx context.Context) error
 }
 
 func (d *Db) Close() {
 	d.pool.Close()
 }
 
-func NewDb(ctx context.Context, logger *logging.EventLogger, conn string) *Db {
+func NewDb(ctx context.Context, logger *logging.EventLogger, conn string) Db {
 	pool, err := pgxpool.New(ctx, conn)
 	if err != nil {
 		log.Fatalf("%s", ErrConnect)
-		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
@@ -55,7 +46,7 @@ func NewDb(ctx context.Context, logger *logging.EventLogger, conn string) *Db {
 
 	_, _ = pool.Exec(ctx, table)
 
-	return &Db{
+	return Db{
 		pool: pool,
 		log:  logger,
 	}

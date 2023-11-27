@@ -32,8 +32,7 @@ func Redirect(cache Cacher, store Storager, logger *logging.EventLogger) gin.Han
 			if orig != "" && err == nil {
 
 				if err = cache.Set(ctx, q.Alias, orig); err != nil {
-					logger.Log("error", "reading and writing to cache failed")
-					logger.Log("error", err.Error())
+					logger.Log("error", "reading and writing to cache failed: "+err.Error())
 				}
 
 				c.Set("status code", http.StatusTemporaryRedirect)
