@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"Darkyfun/UrlShortener/internal/lib"
+	"Darkyfun/UrlShortener/internal/aliasname"
 	"Darkyfun/UrlShortener/internal/storage/persistent"
 	"context"
 	"errors"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Saver is handler who parses original url and then responses with alias url
+// Saver принимает оригинальный URL от клиента и возвращает ему ссылку с псевдонимом.
 func Saver(cache Cacher, store Storager, addr string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origUrl := c.Request.Context().Value("IncomeUrl").(string)
@@ -36,7 +36,7 @@ func Saver(cache Cacher, store Storager, addr string) gin.HandlerFunc {
 			}
 		}
 
-		alias = lib.GetRandomAlias(10)
+		alias = aliasname.GetRandomAlias(10)
 		for {
 			err = store.Set(ctx, alias, origUrl)
 			if err == nil {

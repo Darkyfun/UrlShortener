@@ -1,7 +1,6 @@
 package persistent
 
 import (
-	"Darkyfun/UrlShortener/internal/logging"
 	"context"
 	"fmt"
 	"time"
@@ -13,7 +12,12 @@ type Pinger interface {
 	Ping(ctx context.Context) error
 }
 
-func PingStorage(s Pinger, log logging.Logger) {
+type Logger interface {
+	Log(string, string)
+}
+
+// PingStorage циклично отправляет ping-запросы в базу данных для её мониторинга.
+func PingStorage(s Pinger, log Logger) {
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), timeInterval)
 

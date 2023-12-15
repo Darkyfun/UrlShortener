@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"Darkyfun/UrlShortener/internal/logging"
 	"context"
 	"fmt"
 	"time"
@@ -13,7 +12,12 @@ type Pinger interface {
 	Ping(ctx context.Context) error
 }
 
-func PingCache(c Pinger, log logging.Logger) {
+type Logger interface {
+	Log(string, string)
+}
+
+// PingCache циклично отправляет ping-запросы в кэш для его мониторинга.
+func PingCache(c Pinger, log Logger) {
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), timeInterval)
 

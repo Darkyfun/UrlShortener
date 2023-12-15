@@ -1,7 +1,7 @@
+// Package persistent представляет собой реализацию методов для работы с SQL-базой данных.
 package persistent
 
 import (
-	"Darkyfun/UrlShortener/internal/logging"
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
@@ -15,21 +15,23 @@ var ErrNoRows = errors.New("no rows")
 var ErrAlreadyExists = errors.New("alias already exists")
 var ErrConnClosed = errors.New("connection closed")
 
+// Db - это структура, реализующая запросы к SQL-базе данных.
 type Db struct {
 	pool *pgxpool.Pool
-	log  logging.Logger
+	log  Logger
 }
 
+// Close закрывает пул соединений.
 func (d *Db) Close() {
 	d.pool.Close()
 }
 
-func NewDb(ctx context.Context, logger *logging.EventLogger, conn string) Db {
+// NewDb возвращает новую структуру Db, готовую к работе с базой данных.
+func NewDb(ctx context.Context, logger Logger, conn string) Db {
 	pool, err := pgxpool.New(ctx, conn)
 	if err != nil {
 		log.Fatalf("%s", ErrConnect)
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 
@@ -52,6 +54,7 @@ func NewDb(ctx context.Context, logger *logging.EventLogger, conn string) Db {
 	}
 }
 
+// GetOriginal возвращает из базы данных оригинальный URL по указанному псевдониму.
 func (d *Db) GetOriginal(ctx context.Context, alias string) (string, error) {
 	res := d.pool.QueryRow(ctx, `select original from url where alias = $1`, alias)
 	var orig string
@@ -72,6 +75,7 @@ func (d *Db) GetOriginal(ctx context.Context, alias string) (string, error) {
 	return orig, err
 }
 
+// GetAlias возвращает из базы данных псевдоним по указанному оригинальному URL.
 func (d *Db) GetAlias(ctx context.Context, orig string) (string, error) {
 	res := d.pool.QueryRow(ctx, `select alias from url where original = $1`, orig)
 	var alias string
@@ -92,6 +96,7 @@ func (d *Db) GetAlias(ctx context.Context, orig string) (string, error) {
 	return alias, nil
 }
 
+// Set записывает в базу данных оригинальный URL и его псевдоним.
 func (d *Db) Set(ctx context.Context, alias string, orig string) error {
 	_, err := d.pool.Exec(ctx, `insert into url (alias, original, created_date) values ($1, $2, $3)`, alias, orig, time.Now())
 
@@ -109,6 +114,7 @@ func (d *Db) Set(ctx context.Context, alias string, orig string) error {
 	return err
 }
 
+// Ping проверяет соединение с базой данной.
 func (d *Db) Ping(ctx context.Context) error {
 	return d.pool.Ping(ctx)
 }

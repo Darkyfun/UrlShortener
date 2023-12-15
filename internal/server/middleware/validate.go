@@ -12,11 +12,12 @@ import (
 var ErrInvalidRequest = errors.New("invalid request")
 var ErrInvalidUrl = errors.New("invalid url")
 
+// request - структура, предназначенная для парсинга JSON входящего запроса.
 type request struct {
 	Url string `json:"url"`
 }
 
-// Validate is a url validator middleware
+// Validate валидирует содержимное входящего http-запроса.
 func Validate() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var r request

@@ -22,15 +22,18 @@ func TestSaver(t *testing.T) {
 	db := persistent.NewDb(context.Background(), logger, TestBase)
 	rdb := cache.NewCacheDb(cache.Opts{Addr: redisAddr}, logger)
 
+	// проверяем доступность кэша и базы данных.
 	err := db.Ping(context.Background())
 	assert.Nil(t, err)
 	err = rdb.Ping(context.Background())
 	assert.Nil(t, err)
 
+	// настраиваем gin.
 	router := gin.New()
-	router.Use(Saver(rdb, db, ":5050"))
+	router.Use(Saver(rdb, &db, ":5050"))
 	router.POST("/receive")
 
+	// happy path.
 	w := httptest.NewRecorder()
 	r, err := http.NewRequest(http.MethodPost, "/receive", strings.NewReader("{\"url\":\"https://www.google.com\"}"))
 	assert.Nil(t, err)
@@ -38,9 +41,11 @@ func TestSaver(t *testing.T) {
 	router.ServeHTTP(w, r)
 	assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 
+	// закрываем соединение с кэшем.
 	db.Close()
 	err = rdb.Close()
 
+	// тест с закрытым соединение к кэшу.
 	w = httptest.NewRecorder()
 	r, err = http.NewRequest(http.MethodPost, "/receive", strings.NewReader("{\"url\":\"https://www.google.com\"}"))
 	assert.Nil(t, err)

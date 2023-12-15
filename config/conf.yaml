@@ -4,7 +4,7 @@ OutputType: "json" # should be console or json
 # server conf
 ServerAddr: ":5050" # :port
 ReadTimeout: 10
-WriteTimeout: 3
+WriteTimeout: 5
 IdleTimeout: 30
 
 # redis config
@@ -14,5 +14,6 @@ CachePass: ""
 MaxRetries: 3 # default is 3
 PoolSize: 60  # default is 10 per CPU
 
-# TODO Postgres config
-SqlConnString: "postgres://go:123@localhost:5432/service"
+# postgres config
+# defaults
+SqlConnString: "postgres://go:123@localhost:5432/service?"
