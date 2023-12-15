@@ -1,3 +1,4 @@
+// Package middleware содержит middlewares для работы с входящими http-запросами
 package middleware
 
 import (
@@ -12,6 +13,7 @@ type LogHandler struct {
 	ZapLog *zap.SugaredLogger
 }
 
+// NewLogHandler возвращает логер, служащий основой для логирования входящих запросов.
 func NewLogHandler(file io.Writer) *LogHandler {
 	conf := zapcore.EncoderConfig{
 		MessageKey:     "message",
@@ -26,6 +28,7 @@ func NewLogHandler(file io.Writer) *LogHandler {
 	return &LogHandler{ZapLog: logger}
 }
 
+// Logger возвращает gin middleware, используемый для логирования входящих запросов.
 func (l *LogHandler) Logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()

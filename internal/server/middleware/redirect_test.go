@@ -32,7 +32,7 @@ func TestRedirect(t *testing.T) {
 	rdb := cache.NewCacheDb(cache.Opts{Addr: redisAddr}, logger)
 
 	router := gin.New()
-	router.GET("/redirect/:alias", Redirect(rdb, db, logger))
+	router.GET("/redirect/:alias", Redirect(rdb, &db, logger))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

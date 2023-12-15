@@ -1,21 +1,21 @@
+// Package logging содержит функции для создания и настройки логера приложения
 package logging
 
 import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"io"
+	"strings"
 )
 
-type Logger interface {
-	Log(string, string)
-}
-
+// EventLogger - это структура, предназначенная для логирования событий внутри приложения.
 type EventLogger struct {
 	logger *zap.Logger
 }
 
+// Log записывает в текстовый файл лога события, произошедшие в системе.
 func (c *EventLogger) Log(level string, msg string) {
-	switch level {
+	switch strings.ToLower(level) {
 	case "debug":
 		c.logger.Log(zap.DebugLevel, msg)
 	case "info":
@@ -31,9 +31,10 @@ func (c *EventLogger) Log(level string, msg string) {
 	}
 }
 
+// NewLogger возвращает настроенный EventLogger
 func NewLogger(outputType string, file io.Writer) *EventLogger {
 	var encType zapcore.Encoder
-	
+
 	conf := zapcore.EncoderConfig{
 		MessageKey:          "message",
 		LevelKey:            "log_level",
@@ -55,7 +56,7 @@ func NewLogger(outputType string, file io.Writer) *EventLogger {
 		encType = zapcore.NewConsoleEncoder(conf)
 	}
 
-	core := zapcore.NewCore(encType, zapcore.AddSync(file), zapcore.WarnLevel)
+	core := zapcore.NewCore(encType, zapcore.AddSync(file), zapcore.DebugLevel)
 	logger := zap.New(core, zap.AddStacktrace(zapcore.PanicLevel))
 
 	return &EventLogger{logger: logger}

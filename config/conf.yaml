@@ -14,5 +14,6 @@ CachePass: ""
 MaxRetries: 3 # default is 3
 PoolSize: 60  # default is 10 per CPU
 
-# TODO Postgres config
+# postgres config
+# defaults
 SqlConnString: "postgres://postgres:123@shortener-postgres:5432/service"

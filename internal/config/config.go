@@ -1,3 +1,4 @@
+// Package config служит для парсинга и последующей работы с файлами конфигурации.
 package config
 
 import (
@@ -7,9 +8,10 @@ import (
 	"time"
 )
 
-var ErrEnvVarNotFound = errors.New("You need to set up environment variable first.\nThat variable should contain 'conf.yaml' file.")
+var ErrEnvVarNotFound = errors.New("you need to set up environment variable first.\nThat variable should contain 'conf.yaml' file")
 var ErrFileNotFound = errors.New("config file is missing")
 
+// GetConfig парсит файл конфигурации.
 func GetConfig(path string) (*viper.Viper, error) {
 	conf := viper.New()
 
@@ -22,16 +24,16 @@ func GetConfig(path string) (*viper.Viper, error) {
 	if err := conf.ReadInConfig(); err != nil {
 		return nil, ErrFileNotFound
 	}
-	// logging config
+	// logging config.
 	conf.SetDefault("OutputType", "console")
 
-	// server config
+	// server config.
 	conf.SetDefault("Addr", "localhost:8081")
 	conf.SetDefault("ReadTimeout", time.Second*10)
 	conf.SetDefault("WriteTimeout", time.Second*5)
 	conf.SetDefault("IdleTimeout", time.Second*30)
 
-	// Cache config
+	// Cache config.
 	conf.SetDefault("RedisAddr", "localhost:6379")
 	conf.SetDefault("RedisUser", "")
 	conf.SetDefault("RedisPassword", "")

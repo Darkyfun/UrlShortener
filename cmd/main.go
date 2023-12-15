@@ -3,8 +3,7 @@ package main
 import (
 	"Darkyfun/UrlShortener/internal/config"
 	"Darkyfun/UrlShortener/internal/logging"
-	"Darkyfun/UrlShortener/internal/logging/path"
-	"Darkyfun/UrlShortener/internal/server/connect"
+	"Darkyfun/UrlShortener/internal/logging/logpath"
 	"Darkyfun/UrlShortener/internal/server/middleware"
 	"Darkyfun/UrlShortener/internal/storage/cache"
 	"Darkyfun/UrlShortener/internal/storage/persistent"
@@ -23,21 +22,26 @@ import (
 func main() {
 	fmt.Println("Starting service")
 
-	configPath := flag.String("config", "", "path for config file")
+	configPath := flag.String("config", "", "logpath for config file")
 	flag.Parse()
 
+	// парсим файл конфигурации.
 	conf, err := config.GetConfig(*configPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// initializing logger and logging path
+	// инициализируем логеры.
 	fmt.Println("Reading config")
-	logPaths := path.DestinationLog("./logs")
-	defer logPaths.IncomeLog.Close()
-	defer logPaths.ErrorLog.Close()
+	logPaths := logpath.DestinationLog("./logs")
 
 	fmt.Println("Setting destination for logs")
+
+	defer func() {
+		if err := logPaths.CloseFiles(); err != nil {
+			fmt.Println(err)
+		}
+	}()
 
 	baseLogger := logging.NewLogger(conf.GetString("OutputType"), logPaths.ErrorLog)
 
@@ -52,25 +56,28 @@ func main() {
 		PoolSize:   conf.GetInt("PoolSize"),
 	}
 
-	rdb, err := cache.NewCacheDb(cacheOpts, baseLogger)
-	if err != nil {
-		baseLogger.Log("error", err.Error())
-		log.Fatal(err)
-	}
-	defer rdb.Close()
+	// подключаемся к кэшу.
+	rdb := cache.NewCacheDb(cacheOpts, baseLogger)
+	defer func() {
+		err = rdb.Close()
+		if err != nil {
+			baseLogger.Log("error", "can not close the connection to Cache Db: "+err.Error())
+		}
+	}()
 	fmt.Println("Connected to cache database")
 
+	// подключаемся в SQL-базе данных.
 	db := persistent.NewDb(ctx, baseLogger, conf.GetString("SqlConnString"))
 	defer db.Close()
 	fmt.Println("Connected to persistence database")
 
-	// cache healthcheck
-	go connect.PingCache(rdb, baseLogger)
+	// бесконечный healthcheck к кэшу.
+	go cache.PingCache(rdb, baseLogger)
 
-	// storage healthcheck
-	go connect.PingStorage(db, baseLogger)
+	// бесконечный healthcheck к SQL-базе данных.
+	go persistent.PingStorage(&db, baseLogger)
 
-	// initializing Gin framework
+	// инициализируем gin.
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 
@@ -78,8 +85,8 @@ func main() {
 	router.Use(middleLogger.Logger())
 	router.Use(gin.Recovery())
 
-	router.GET("/redirect/:alias", middleware.Redirect(rdb, db, baseLogger))
-	router.POST("/receive", middleware.Validate(), middleware.Saver(rdb, db, conf.GetString("ServerAddr")))
+	router.GET("/redirect/:alias", middleware.Redirect(rdb, &db, baseLogger))
+	router.POST("/receive", middleware.Validate(), middleware.Saver(rdb, &db, conf.GetString("ServerAddr")))
 
 	server := &http.Server{
 		Addr:         conf.GetString("ServerAddr"),
@@ -89,12 +96,13 @@ func main() {
 		IdleTimeout:  conf.GetDuration("IdleTimeout") * time.Second,
 	}
 
-	// Starting server
+	// запускаем сервер.
 	fmt.Println("Starting server")
 	go func() { baseLogger.Log("info", server.ListenAndServe().Error()) }()
 
 	fmt.Println("Server has been started")
 
+	// graceful shutdown.
 	quit := make(chan os.Signal)
 	signal.Notify(
 		quit,
@@ -108,13 +116,12 @@ func main() {
 	defer cancel()
 
 	if err = server.Shutdown(serveCtx); err != nil {
-		fmt.Errorf("Shutting down: %v\n", err)
+		log.Fatalf("Shutting down: %v\n", err)
 	}
 
 	select {
 	case <-serveCtx.Done():
 		baseLogger.Log("warn", "Server shutdown by timeout")
-		fmt.Println("Server shutdown by timeout")
 	default:
 		fmt.Println("Done")
 	}

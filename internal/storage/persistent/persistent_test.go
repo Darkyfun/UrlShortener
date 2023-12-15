@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"log"
 
-	//"github.com/magiconair/properties/assert"
 	"io"
 	"testing"
 	"time"
@@ -21,23 +20,35 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	pool.Exec(context.Background(), `drop table url`)
+	_, err = pool.Exec(context.Background(), `drop table url`)
+	if err != nil {
+		log.Fatalf("failed to perform exec query 'drop table...' in test: %v\n", err)
+	}
 
-	pool.Exec(context.Background(), `create table if not exists url (
+	_, err = pool.Exec(context.Background(), `create table if not exists url (
     	alias varchar primary key ,
     	original varchar,
     	created_date timestamp
 		)`,
 	)
+	if err != nil {
+		log.Fatalf("failed to perform exec query 'create table...' in test: %v\n", err)
+	}
 
-	pool.Exec(context.Background(), `insert into url (alias, original) values ('newone', 'testurl')`)
+	_, err = pool.Exec(context.Background(), `insert into url (alias, original) values ('newone', 'testurl')`)
+	if err != nil {
+		log.Fatalf("failed to perform exec query 'insert into...' in test: %v\n", err)
+	}
 
-	// for redirect test
-	pool.Exec(context.Background(), `insert into url (alias, original) values ('googlealias', 'https://www.google.come')`)
+	// for redirect test.
+	_, err = pool.Exec(context.Background(), `insert into url (alias, original) values ('googlealias', 'https://www.google.come')`)
+	if err != nil {
+		log.Fatalf("failed to perform exec query 'insert into...' in test: %v\n", err)
+	}
 
-	// before tests
+	// before tests.
 	m.Run()
-	// after tests
+	// after tests.
 }
 
 func TestDb_Set(t *testing.T) {
@@ -63,13 +74,14 @@ func TestDb_Set(t *testing.T) {
 		})
 	}
 
-	ctxExp, _ := context.WithTimeout(context.Background(), time.Nanosecond)
+	ctxExp, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
 	time.Sleep(time.Nanosecond * 100)
 
-	err := db.Set(ctxExp, "timoute", "timeout")
+	err := db.Set(ctxExp, "timeout", "timeout")
 	assert.Equal(t, ErrConnect, err)
 
-	// closing connection for catching ErrConnClosed
+	// closing connection for catching ErrConnClosed.
 	db.Close()
 
 	err = db.Set(ctx, "closed connect", "closed connect")
@@ -100,14 +112,15 @@ func TestDb_GetOriginal(t *testing.T) {
 		})
 	}
 
-	ctxExp, _ := context.WithTimeout(context.Background(), time.Nanosecond)
+	ctxExp, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
 	time.Sleep(time.Nanosecond * 100)
 
 	res, err := db.GetOriginal(ctxExp, "newone")
 	assert.Equal(t, ErrConnect, err)
 	assert.Equal(t, "", res)
 
-	// closing connection for catching ErrConnClosed
+	// closing connection for catching ErrConnClosed.
 	db.Close()
 
 	orig, err := db.GetOriginal(ctx, "closed connection")
@@ -139,7 +152,8 @@ func TestDb_GetAlias(t *testing.T) {
 		})
 	}
 
-	ctxExp, _ := context.WithTimeout(context.Background(), time.Nanosecond)
+	ctxExp, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
 	time.Sleep(time.Nanosecond * 100)
 
 	res, err := db.GetAlias(ctxExp, "testurl")

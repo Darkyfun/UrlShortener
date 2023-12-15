@@ -1,10 +1,11 @@
+// Package cache представляет собой реализацию методов для работы с базой данных, являющейся кэшем.
 package cache
 
 import (
-	"Darkyfun/UrlShortener/internal/logging"
 	"context"
 	"errors"
 	"github.com/redis/go-redis/v9"
+	"log"
 	"time"
 )
 
@@ -12,44 +13,46 @@ var ErrFailed = errors.New("operation failed")
 var ErrClientClosed = errors.New("unable to set a record: client is closed")
 var ErrCacheMiss = errors.New("cache miss")
 
+// RapidDb - это структура, реализующая запросы к базе данных, являющейся кэшем.
 type RapidDb struct {
 	rdb *redis.Client
-	log logging.Logger
+	log Logger
 }
 
+// Opts - это опции, необходимые для подключения к кэшу.
 type Opts struct {
 	Addr, User, Password string
 	MaxRetries, PoolSize int
 }
 
-func NewCacheDb(options Opts, log *logging.EventLogger) (*RapidDb, error) {
+// NewCacheDb возвращает переменную *RapidDb, готовую к работе с кэшем.
+func NewCacheDb(options Opts, logg Logger) *RapidDb {
 	client := redis.NewClient(&redis.Options{
 		Addr: options.Addr,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
-
-	_, err := client.Ping(ctx).Result()
-
-	if err != nil {
-		return nil, err
+	if err := client.Ping(ctx).Err(); err != nil {
+		log.Fatal(err)
 	}
 
-	return &RapidDb{rdb: client, log: log}, nil
+	return &RapidDb{rdb: client, log: logg}
 }
 
+// Ping тестирует соединение с кэшем.
 func (c *RapidDb) Ping(ctx context.Context) error {
 	return c.rdb.Ping(ctx).Err()
 }
 
+// Close закрывает соединение с кэшем.
 func (c *RapidDb) Close() error {
 	return c.rdb.Close()
 }
 
-// Set sets key-value pair in the cache
-func (c *RapidDb) Set(ctx context.Context, key string, value any) error {
-	_, err := c.rdb.Set(ctx, key, value, time.Hour).Result()
+// Set сохраняет в кэше запись, состояющую из псевдонима и оригинального URL.
+func (c *RapidDb) Set(ctx context.Context, keyAlias string, valueOriginal any) error {
+	_, err := c.rdb.Set(ctx, keyAlias, valueOriginal, time.Hour).Result()
 
 	if err != nil && err.Error() == "redis: client is closed" {
 		c.log.Log("error", ErrClientClosed.Error())
@@ -62,9 +65,9 @@ func (c *RapidDb) Set(ctx context.Context, key string, value any) error {
 	return nil
 }
 
-// Get gets value by provided key
-func (c *RapidDb) Get(ctx context.Context, key string) (string, error) {
-	res := c.rdb.Get(ctx, key)
+// Get получает значения псевдонима из кэша по указанному псевдониму.
+func (c *RapidDb) Get(ctx context.Context, keyAlias string) (string, error) {
+	res := c.rdb.Get(ctx, keyAlias)
 	url, err := res.Result()
 
 	if err != nil {
